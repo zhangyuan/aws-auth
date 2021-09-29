@@ -1,4 +1,5 @@
 use std::collections::HashMap;
+use std::io::Write;
 
 use aws_auth::IdentiyProvider;
 use aws_auth::SAMLAssertion;
@@ -47,21 +48,24 @@ fn main() -> anyhow::Result<()> {
         let role_arn = role.next().unwrap();
         let principal_arn = role.next().unwrap();
 
-        let resp = aws.get_sts_token(&role_arn, &principal_arn, &saml_assertion.encoded_as_base64())?;
+        let credentials = aws.get_sts_token(&role_arn, &principal_arn, &saml_assertion.encoded_as_base64())?;
 
-        // let resp: AssumeRoleWithSAMLResponseWrapper = client.get("https://sts.cn-northwest-1.amazonaws.com.cn")
-        //     .query(&[
-        //         ("Version", "2011-06-15"),
-        //         ("Action", "AssumeRoleWithSAML"),
-        //         ("RoleArn", &role_arn),
-        //         ("PrincipalArn", &principal_arn),
-        //         ("SAMLAssertion", &saml_assertion.encoded_as_base64())
-        //     ])
-        //     .header("Accept", "application/json")
-        //     .send()?
-        //     .json()?;
+        println!("{:?}", credentials);
 
-        println!("{:?}", resp);        
+        let credentials_file_content = format!(r#"
+[default]
+aws_access_key_id = {}
+aws_secret_access_key = {}
+aws_session_token = {}
+        "#, credentials.access_key_id, credentials.secret_access_key, credentials.session_token);
+
+        println!("{}", credentials_file_content);
+
+        use std::fs::File;
+        let home = std::env::var("HOME").unwrap();
+
+        let mut file = File::create(format!("{}/.aws/credentials", home))?;
+        file.write_all(credentials_file_content.as_bytes())?;
     }
 
     return Ok(());
