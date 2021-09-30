@@ -5,6 +5,7 @@ use aws_auth::IdentiyProvider;
 use aws_auth::SAMLAssertion;
 
 mod okta;
+use aws_auth::ui::StdUI;
 use okta::Okta;
 
 mod aws;
@@ -26,7 +27,9 @@ fn main() -> anyhow::Result<()> {
 
     let client = http_client::create_http_client_with_redirects()?;
 
+    let stdui = StdUI {};
     let okta = Okta {
+        ui: &stdui,
         http_client: &client,
         base_uri: okta_uri,
         app_link: app_link

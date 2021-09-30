@@ -6,7 +6,7 @@ use scraper::Selector;
 use aws_auth::IdentiyProvider;
 use aws_auth::SAMLAssertion;
 
-use aws_auth::ui;
+use aws_auth::ui::UI;
 
 #[derive(Deserialize, Debug)]
 struct AuthNResponse {
@@ -53,6 +53,7 @@ struct Role {
     name: String,
 }
 pub struct Okta<'a> {
+    pub ui: &'a dyn UI,
     pub http_client: &'a reqwest::blocking::Client,
     pub base_uri: &'a str,
     pub app_link: &'a str
@@ -60,9 +61,7 @@ pub struct Okta<'a> {
 
 impl<'a> Okta<'a> {
     pub fn primary_auth(&self) -> anyhow::Result<SAMLAssertion> {
-        let username = ui::read_from_stdin("Username");
-        let password = ui::read_password_from_stdin("Password");
-    
+        let (username, password) = self.ui.get_username_and_password();
         let mut request_data = HashMap::new();
         request_data.insert("username", username);
         request_data.insert("password", password);
@@ -83,7 +82,7 @@ impl<'a> Okta<'a> {
             println!("token:software:totp");
     
             let mfa_prompt = format!("{}: ", factor.provider);
-            let mfa_code = ui::read_from_stdin(&mfa_prompt);
+            let mfa_code = self.ui.get(&mfa_prompt);
     
             let mut request_data = HashMap::new();
             request_data.insert("stateToken", state_token);

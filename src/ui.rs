@@ -1,27 +1,42 @@
 use std::io::{self, Write, BufRead};
 
-pub fn read_from_stdin(prompt: &str) -> String {
-    let stdin = io::stdin();
-    let mut text = String::new();
-    while text.trim().is_empty() {
-        print!("{}: ", prompt);
-        io::stdout().flush().unwrap();
-        text.clear();
-        stdin.lock().read_line(&mut text).expect("Could not read username");
-    }
-    text.trim().to_string()
+pub trait UI {
+    fn get_username_and_password(&self) -> (String, String);
+    fn get(&self, prompt: &str) -> String;
 }
 
-pub fn read_password_from_stdin(prompt: &str) -> String {
-    loop {
-        print!("{}: ", prompt);
-        io::stdout().flush().unwrap();
+pub struct StdUI {
+}
 
-        let pass = rpassword::read_password().unwrap();
+impl UI for StdUI {
+    fn get_username_and_password(&self) -> (String, String) {
+        let username = self.get("Username");
 
-        if pass.trim().is_empty() {
-            continue
+        let mut password: String;
+        loop {
+            print!("{}: ", "Password");
+            io::stdout().flush().unwrap();
+
+            password = rpassword::read_password().unwrap();
+
+            if password.trim().is_empty() {
+                continue
+            }
+            break;
         }
-        return pass.trim().to_string();
+
+        (username, password)
+    }
+
+    fn get(&self, prompt: &str) -> String {
+        let stdin = io::stdin();
+        let mut text = String::new();
+        while text.trim().is_empty() {
+            print!("{}: ", prompt);
+            io::stdout().flush().unwrap();
+            text.clear();
+            stdin.lock().read_line(&mut text).expect("Could not read username");
+        }
+        return text.trim().to_string();
     }
 }
