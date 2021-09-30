@@ -1,5 +1,6 @@
 use std::collections::HashMap;
 use std::io::Write;
+use url::Url;
 
 use aws_auth::IdentiyProvider;
 use aws_auth::SAMLAssertion;
@@ -22,7 +23,9 @@ fn main() -> anyhow::Result<()> {
     let app_link = settings.get("app-link").unwrap();
     println!("app_link: {}", app_link);
 
-    let okta_uri = settings.get("okta-uri").unwrap();
+    let parsed_url = Url::parse(app_link)?;
+    let okta_uri = format!("{}://{}", parsed_url.scheme(), parsed_url.domain().unwrap());
+
     println!("okta_uri: {}", okta_uri);
 
     let client = http_client::create_http_client_with_redirects()?;
@@ -31,7 +34,7 @@ fn main() -> anyhow::Result<()> {
     let okta = Okta {
         ui: &stdui,
         http_client: &client,
-        base_uri: okta_uri,
+        base_uri: &okta_uri,
         app_link: app_link
     };
 
