@@ -34,7 +34,7 @@ fn main() -> anyhow::Result<()> {
         ui: &stdui,
         http_client: &client,
         base_uri: &okta_uri,
-        app_link: app_link,
+        app_link,
     };
 
     let aws = AwsClient {
@@ -46,7 +46,7 @@ fn main() -> anyhow::Result<()> {
     let roles = saml_assertion.extract_roles()?;
 
     if roles.len() == 1 {
-        let mut role = roles[0].split(",");
+        let mut role = roles[0].split(',');
 
         println!("roles[0] {}", roles[0]);
 
@@ -80,7 +80,7 @@ aws_session_token = {}
         file.write_all(credentials_file_content.as_bytes())?;
     }
 
-    return Ok(());
+    Ok(())
 }
 
 fn get_saml_assertion(provider: &dyn IdentiyProvider) -> anyhow::Result<SAMLAssertion> {

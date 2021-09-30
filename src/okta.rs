@@ -119,7 +119,7 @@ impl<'a> Okta<'a> {
             return Ok(assertion);
         }
 
-        return Err(anyhow::anyhow!("Error occurs"));
+        Err(anyhow::anyhow!("Error occurs"))
     }
     fn get_session_id(&self, session_token: &str) -> anyhow::Result<String> {
         let mut request_data = HashMap::new();
@@ -133,7 +133,7 @@ impl<'a> Okta<'a> {
             .send()?
             .json()?;
 
-        return Ok(resp.id);
+        Ok(resp.id)
     }
 
     fn get_saml(&self, session_id: &str) -> anyhow::Result<SAMLAssertion> {
@@ -147,12 +147,12 @@ impl<'a> Okta<'a> {
         let resp_argument = &resp;
         let base64_saml_assertion = get_base64_saml_assertion(&resp_argument);
 
-        let x = base64::decode(base64_saml_assertion.to_string())?;
+        let x = base64::decode(base64_saml_assertion)?;
         let assertion = String::from_utf8(x)?;
         let saml_assertion = SAMLAssertion {
-            assertion: assertion,
+            assertion
         };
-        return Ok(saml_assertion);
+        Ok(saml_assertion)
     }
 }
 

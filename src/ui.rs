@@ -13,7 +13,7 @@ impl UI for StdUI {
 
         let mut password: String;
         loop {
-            print!("{}: ", "Password");
+            print!("Password: ");
             io::stdout().flush().unwrap();
 
             password = rpassword::read_password().unwrap();
