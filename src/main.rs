@@ -16,8 +16,7 @@ mod http_client;
 
 fn main() -> anyhow::Result<()> {
     let mut settings = config::Config::default();
-    settings
-        .merge(config::File::with_name("aws-auth")).unwrap();
+    settings.merge(config::File::with_name("aws-auth")).unwrap();
     let settings = settings.try_into::<HashMap<String, String>>().unwrap();
 
     let app_link = settings.get("app-link").unwrap();
@@ -35,11 +34,11 @@ fn main() -> anyhow::Result<()> {
         ui: &stdui,
         http_client: &client,
         base_uri: &okta_uri,
-        app_link: app_link
+        app_link: app_link,
     };
 
     let aws = AwsClient {
-        http_client: &http_client::create_http_client()
+        http_client: &http_client::create_http_client(),
     };
 
     let saml_assertion = get_saml_assertion(&okta)?;
@@ -54,16 +53,23 @@ fn main() -> anyhow::Result<()> {
         let role_arn = role.next().unwrap();
         let principal_arn = role.next().unwrap();
 
-        let credentials = aws.get_sts_token(&role_arn, &principal_arn, &saml_assertion.encoded_as_base64())?;
+        let credentials = aws.get_sts_token(
+            &role_arn,
+            &principal_arn,
+            &saml_assertion.encoded_as_base64(),
+        )?;
 
         println!("{:?}", credentials);
 
-        let credentials_file_content = format!(r#"
+        let credentials_file_content = format!(
+            r#"
 [default]
 aws_access_key_id = {}
 aws_secret_access_key = {}
 aws_session_token = {}
-        "#, credentials.access_key_id, credentials.secret_access_key, credentials.session_token);
+        "#,
+            credentials.access_key_id, credentials.secret_access_key, credentials.session_token
+        );
 
         println!("{}", credentials_file_content);
 

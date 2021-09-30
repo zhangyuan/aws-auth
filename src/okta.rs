@@ -1,7 +1,7 @@
-use std::collections::HashMap;
-use serde::{Deserialize};
 use scraper::Html;
 use scraper::Selector;
+use serde::Deserialize;
+use std::collections::HashMap;
 
 use aws_auth::IdentiyProvider;
 use aws_auth::SAMLAssertion;
@@ -14,12 +14,12 @@ struct AuthNResponse {
     #[serde(rename = "stateToken")]
     state_token: String,
     #[serde(rename = "_embedded")]
-    embedded: AuthNResponseEmbedded
+    embedded: AuthNResponseEmbedded,
 }
 
 #[derive(Deserialize, Debug)]
 struct AuthNResponseEmbedded {
-    factors: Vec<MfaFactor>
+    factors: Vec<MfaFactor>,
 }
 
 #[derive(Deserialize, Debug)]
@@ -28,7 +28,7 @@ struct MfaFactor {
     #[serde(rename = "factorType")]
     factor_type: String,
     #[serde(rename = "_links")]
-    links: HashMap<String, Link>
+    links: HashMap<String, Link>,
 }
 
 #[derive(Deserialize, Debug)]
@@ -56,7 +56,7 @@ pub struct Okta<'a> {
     pub ui: &'a dyn UI,
     pub http_client: &'a reqwest::blocking::Client,
     pub base_uri: &'a str,
-    pub app_link: &'a str
+    pub app_link: &'a str,
 }
 
 impl<'a> Okta<'a> {
@@ -65,69 +65,81 @@ impl<'a> Okta<'a> {
         let mut request_data = HashMap::new();
         request_data.insert("username", username);
         request_data.insert("password", password);
-    
+
         let uri = format!("{}/api/v1/authn", self.base_uri);
-        let resp: AuthNResponse = self.http_client.post(uri)
+        let resp: AuthNResponse = self
+            .http_client
+            .post(uri)
             .json(&request_data)
             .send()?
             .json()?;
         println!("{:?}", resp);
-    
+
         if resp.status == "MFA_REQUIRED" {
             println!("MFA_REQUIRED");
             let state_token = &resp.state_token;
-    
-            let factor = resp.embedded.factors.into_iter().find(|x| x.factor_type == "token:software:totp").unwrap();
-    
+
+            let factor = resp
+                .embedded
+                .factors
+                .into_iter()
+                .find(|x| x.factor_type == "token:software:totp")
+                .unwrap();
+
             println!("token:software:totp");
-    
+
             let mfa_prompt = format!("{}: ", factor.provider);
             let mfa_code = self.ui.get(&mfa_prompt);
-    
+
             let mut request_data = HashMap::new();
             request_data.insert("stateToken", state_token);
             request_data.insert("answer", &mfa_code);
-    
+
             let verify_link = factor.links.get("verify").unwrap();
             let verify_url = &verify_link.href;
-    
+
             println!("{}", verify_url);
             println!("{:?}", request_data);
- 
-        
-            let resp: VerifyResponse = self.http_client.post(verify_url)
+
+            let resp: VerifyResponse = self
+                .http_client
+                .post(verify_url)
                 .json(&request_data)
                 .send()?
                 .json()?;
-    
+
             println!("{:?}", resp);
-    
+
             let session_token = resp.session_token;
 
             let session_id = self.get_session_id(&session_token)?;
 
             let assertion = self.get_saml(&session_id)?;
 
-            return Ok(assertion)
+            return Ok(assertion);
         }
-    
+
         return Err(anyhow::anyhow!("Error occurs"));
     }
     fn get_session_id(&self, session_token: &str) -> anyhow::Result<String> {
         let mut request_data = HashMap::new();
         request_data.insert("sessionToken", session_token);
-    
+
         let uri = format!("{}/api/v1/sessions", self.base_uri);
-        let resp: CreateSessionResponse = self.http_client.post(uri)
+        let resp: CreateSessionResponse = self
+            .http_client
+            .post(uri)
             .json(&request_data)
             .send()?
             .json()?;
-    
-        return Ok(resp.id)
+
+        return Ok(resp.id);
     }
 
     fn get_saml(&self, session_id: &str) -> anyhow::Result<SAMLAssertion> {
-        let resp = self.http_client.get(self.app_link)
+        let resp = self
+            .http_client
+            .get(self.app_link)
             .header("Cookie", format!("sid={}", session_id))
             .send()?
             .text()?;
@@ -138,10 +150,10 @@ impl<'a> Okta<'a> {
         let x = base64::decode(base64_saml_assertion.to_string())?;
         let assertion = String::from_utf8(x)?;
         let saml_assertion = SAMLAssertion {
-            assertion: assertion
+            assertion: assertion,
         };
         return Ok(saml_assertion);
-    }    
+    }
 }
 
 impl IdentiyProvider for Okta<'_> {

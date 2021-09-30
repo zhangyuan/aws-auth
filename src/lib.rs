@@ -5,7 +5,7 @@ pub trait IdentiyProvider {
 }
 
 pub struct SAMLAssertion {
-    pub assertion: String
+    pub assertion: String,
 }
 
 impl SAMLAssertion {
@@ -15,12 +15,17 @@ impl SAMLAssertion {
 
     pub fn extract_roles(&self) -> anyhow::Result<Vec<String>> {
         let doc = roxmltree::Document::parse(&self.assertion)?;
-    
-        let element = doc.descendants()
-            .find(|n| n.attribute("Name") == Some("https://aws.amazon.com/SAML/Attributes/Role")).unwrap();
-    
-        let roles = element.children().flat_map(|e| e.text().map(|t| t.trim().to_string())).collect::<Vec<String>>();
-    
+
+        let element = doc
+            .descendants()
+            .find(|n| n.attribute("Name") == Some("https://aws.amazon.com/SAML/Attributes/Role"))
+            .unwrap();
+
+        let roles = element
+            .children()
+            .flat_map(|e| e.text().map(|t| t.trim().to_string()))
+            .collect::<Vec<String>>();
+
         Ok(roles)
     }
 }

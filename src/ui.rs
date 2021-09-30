@@ -1,12 +1,11 @@
-use std::io::{self, Write, BufRead};
+use std::io::{self, BufRead, Write};
 
 pub trait UI {
     fn get_username_and_password(&self) -> (String, String);
     fn get(&self, prompt: &str) -> String;
 }
 
-pub struct StdUI {
-}
+pub struct StdUI {}
 
 impl UI for StdUI {
     fn get_username_and_password(&self) -> (String, String) {
@@ -20,7 +19,7 @@ impl UI for StdUI {
             password = rpassword::read_password().unwrap();
 
             if password.trim().is_empty() {
-                continue
+                continue;
             }
             break;
         }
@@ -35,7 +34,10 @@ impl UI for StdUI {
             print!("{}: ", prompt);
             io::stdout().flush().unwrap();
             text.clear();
-            stdin.lock().read_line(&mut text).expect("Could not read username");
+            stdin
+                .lock()
+                .read_line(&mut text)
+                .expect("Could not read username");
         }
         return text.trim().to_string();
     }
