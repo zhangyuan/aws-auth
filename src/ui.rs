@@ -1,8 +1,10 @@
 use std::io::{self, BufRead, Write};
+use crate::aws::AwsRole;
 
 pub trait UI {
     fn get_username_and_password(&self) -> (String, String);
     fn get_mfa_code(&self, prompt: &str) -> String;
+    fn get_aws_role<'a>(&self, roles: &'a [crate::aws::AwsRole]) -> &'a AwsRole;
 }
 
 pub struct StdUI {}
@@ -17,6 +19,32 @@ impl UI for StdUI {
 
     fn get_mfa_code(&self, prompt: &str) -> String {
         self.get(prompt)
+    }
+
+    fn get_aws_role<'a>(&self, roles: &'a [crate::aws::AwsRole]) -> &'a AwsRole {
+        let stdin = io::stdin();
+        let mut text = String::new();
+
+        loop {
+            println!("Available role(s):");
+            for (idx, e) in roles.iter().enumerate() {
+                println!("[{}] {}", idx, e.principal_arn);
+            }
+            text.clear();
+            print!("Select the role: ");
+            io::stdout().flush().unwrap();
+            stdin
+                .lock()
+                .read_line(&mut text)
+                .unwrap_or_else(|_| panic!("Could not read role"));
+            let result = text.trim().parse::<usize>();
+
+            if let Ok(selected) = result {
+                if selected < roles.len() {
+                    return roles.get(selected).unwrap();
+                }
+            }
+        }
     }
 }
 

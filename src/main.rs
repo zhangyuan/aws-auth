@@ -2,18 +2,18 @@ use std::collections::HashMap;
 use std::io::Write;
 use url::Url;
 
-mod identity_provider;
+pub mod aws;
+pub mod saml;
+pub mod identity_provider;
+pub mod ui;
+pub mod http_client;
+pub mod okta;
+
 use identity_provider::IdentityProvider;
-
-mod okta;
-use aws_auth::ui::StdUI;
+use ui::{StdUI, UI};
 use okta::Okta;
-
-mod aws;
 use aws::AwsClient;
-use aws::SAMLAssertion;
-
-mod http_client;
+use saml::SAMLAssertion;
 
 fn main() -> anyhow::Result<()> {
     let mut settings = config::Config::default();
@@ -44,37 +44,35 @@ fn main() -> anyhow::Result<()> {
 
     let saml_assertion = get_saml_assertion(&okta)?;
 
-    let roles = saml_assertion.extract_roles()?;
+    let roles= saml_assertion.extract_roles()?;
 
-    if roles.len() == 1 {
-        let role = &roles[0];
+    let selected_role = stdui.get_aws_role(&roles);
 
-        let credentials = aws.get_sts_token(
-            &role.role_arn,
-            &role.principal_arn,
-            &saml_assertion.encoded_as_base64(),
-        )?;
+    let credentials = aws.get_sts_token(
+        &selected_role.role_arn,
+        &selected_role.principal_arn,
+        &saml_assertion.encoded_as_base64(),
+    )?;
 
-        println!("{:?}", credentials);
+    println!("{:?}", credentials);
 
-        let credentials_file_content = format!(
-            r#"
+    let credentials_file_content = format!(
+        r#"
 [default]
 aws_access_key_id = {}
 aws_secret_access_key = {}
 aws_session_token = {}
         "#,
-            credentials.access_key_id, credentials.secret_access_key, credentials.session_token
-        );
+        credentials.access_key_id, credentials.secret_access_key, credentials.session_token
+    );
 
-        println!("{}", credentials_file_content);
+    println!("{}", credentials_file_content);
 
-        use std::fs::File;
-        let home = std::env::var("HOME").unwrap();
+    use std::fs::File;
+    let home = std::env::var("HOME").unwrap();
 
-        let mut file = File::create(format!("{}/.aws/credentials", home))?;
-        file.write_all(credentials_file_content.as_bytes())?;
-    }
+    let mut file = File::create(format!("{}/.aws/credentials", home))?;
+    file.write_all(credentials_file_content.as_bytes())?;
 
     Ok(())
 }

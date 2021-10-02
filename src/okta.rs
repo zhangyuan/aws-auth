@@ -3,10 +3,10 @@ use scraper::Selector;
 use serde::Deserialize;
 use std::collections::HashMap;
 
-use crate::aws::SAMLAssertion;
+use crate::saml::SAMLAssertion;
 use crate::identity_provider::IdentityProvider;
 
-use aws_auth::ui::UI;
+use crate::ui::UI;
 
 #[derive(Deserialize, Debug)]
 struct AuthNResponse {
