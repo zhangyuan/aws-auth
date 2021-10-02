@@ -3,8 +3,8 @@ use scraper::Selector;
 use serde::Deserialize;
 use std::collections::HashMap;
 
-use aws_auth::IdentiyProvider;
-use aws_auth::SAMLAssertion;
+use crate::aws::SAMLAssertion;
+use crate::identity_provider::IdentityProvider;
 
 use aws_auth::ui::UI;
 
@@ -144,17 +144,15 @@ impl<'a> Okta<'a> {
             .send()?
             .text()?;
 
-        let resp_argument = &resp;
-        let base64_saml_assertion = get_base64_saml_assertion(&resp_argument);
+        let base64_saml_assertion = get_base64_saml_assertion(&resp);
 
         let x = base64::decode(base64_saml_assertion)?;
         let assertion = String::from_utf8(x)?;
-        let saml_assertion = SAMLAssertion { assertion };
-        Ok(saml_assertion)
+        Ok(SAMLAssertion { assertion })
     }
 }
 
-impl IdentiyProvider for Okta<'_> {
+impl IdentityProvider for Okta<'_> {
     fn get_saml_assertion(&self) -> anyhow::Result<SAMLAssertion> {
         self.primary_auth()
     }

@@ -2,8 +2,8 @@ use std::collections::HashMap;
 use std::io::Write;
 use url::Url;
 
-use aws_auth::IdentiyProvider;
-use aws_auth::SAMLAssertion;
+mod identity_provider;
+use identity_provider::IdentityProvider;
 
 mod okta;
 use aws_auth::ui::StdUI;
@@ -11,6 +11,7 @@ use okta::Okta;
 
 mod aws;
 use aws::AwsClient;
+use aws::SAMLAssertion;
 
 mod http_client;
 
@@ -78,6 +79,6 @@ aws_session_token = {}
     Ok(())
 }
 
-fn get_saml_assertion(provider: &dyn IdentiyProvider) -> anyhow::Result<SAMLAssertion> {
+fn get_saml_assertion(provider: &dyn IdentityProvider) -> anyhow::Result<SAMLAssertion> {
     provider.get_saml_assertion()
 }

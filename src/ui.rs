@@ -16,7 +16,7 @@ impl UI for StdUI {
     }
 
     fn get_mfa_code(&self, prompt: &str) -> String {
-        self.get(&prompt)
+        self.get(prompt)
     }
 }
 
@@ -31,7 +31,7 @@ impl StdUI {
             stdin
                 .lock()
                 .read_line(&mut text)
-                .expect(&format!("Could not read {}", prompt));
+                .unwrap_or_else(|_| panic!("Could not read {}", prompt));
         }
         return text.trim().to_string();
     }
