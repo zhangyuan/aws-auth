@@ -89,7 +89,7 @@ impl<'a> Okta<'a> {
             println!("token:software:totp");
 
             let mfa_prompt = format!("{}: ", factor.provider);
-            let mfa_code = self.ui.get(&mfa_prompt);
+            let mfa_code = self.ui.get_mfa_code(&mfa_prompt);
 
             let mut request_data = HashMap::new();
             request_data.insert("stateToken", state_token);
@@ -149,9 +149,7 @@ impl<'a> Okta<'a> {
 
         let x = base64::decode(base64_saml_assertion)?;
         let assertion = String::from_utf8(x)?;
-        let saml_assertion = SAMLAssertion {
-            assertion
-        };
+        let saml_assertion = SAMLAssertion { assertion };
         Ok(saml_assertion)
     }
 }

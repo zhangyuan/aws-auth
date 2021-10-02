@@ -2,7 +2,7 @@ use std::io::{self, BufRead, Write};
 
 pub trait UI {
     fn get_username_and_password(&self) -> (String, String);
-    fn get(&self, prompt: &str) -> String;
+    fn get_mfa_code(&self, prompt: &str) -> String;
 }
 
 pub struct StdUI {}
@@ -10,23 +10,17 @@ pub struct StdUI {}
 impl UI for StdUI {
     fn get_username_and_password(&self) -> (String, String) {
         let username = self.get("Username");
-
-        let mut password: String;
-        loop {
-            print!("Password: ");
-            io::stdout().flush().unwrap();
-
-            password = rpassword::read_password().unwrap();
-
-            if password.trim().is_empty() {
-                continue;
-            }
-            break;
-        }
+        let password = self.get_password("Password");
 
         (username, password)
     }
 
+    fn get_mfa_code(&self, prompt: &str) -> String {
+        self.get(&prompt)
+    }
+}
+
+impl StdUI {
     fn get(&self, prompt: &str) -> String {
         let stdin = io::stdin();
         let mut text = String::new();
@@ -37,8 +31,20 @@ impl UI for StdUI {
             stdin
                 .lock()
                 .read_line(&mut text)
-                .expect("Could not read username");
+                .expect(&format!("Could not read {}", prompt));
         }
         return text.trim().to_string();
+    }
+
+    fn get_password(&self, prompt: &str) -> String {
+        loop {
+            print!("{}: ", prompt);
+            io::stdout().flush().unwrap();
+            let password = rpassword::read_password().unwrap();
+            if password.trim().is_empty() {
+                continue;
+            }
+            return password;
+        }
     }
 }
