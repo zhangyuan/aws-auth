@@ -46,16 +46,11 @@ fn main() -> anyhow::Result<()> {
     let roles = saml_assertion.extract_roles()?;
 
     if roles.len() == 1 {
-        let mut role = roles[0].split(',');
-
-        println!("roles[0] {}", roles[0]);
-
-        let role_arn = role.next().unwrap();
-        let principal_arn = role.next().unwrap();
+        let role = &roles[0];
 
         let credentials = aws.get_sts_token(
-            &role_arn,
-            &principal_arn,
+            &role.role_arn,
+            &role.principal_arn,
             &saml_assertion.encoded_as_base64(),
         )?;
 

@@ -1,5 +1,19 @@
 use serde::Deserialize;
 
+pub struct AwsRole {
+    pub principal_arn: String,
+    pub role_arn: String
+}
+
+impl AwsRole {
+    pub fn new(principal_arn: String, role_arn: String) -> Self {
+        Self {
+            principal_arn,
+            role_arn
+        }
+    }
+}
+
 #[derive(Deserialize, Debug)]
 pub struct Credentials {
     #[serde(rename = "AccessKeyId")]

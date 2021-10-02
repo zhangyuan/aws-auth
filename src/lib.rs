@@ -1,4 +1,7 @@
 pub mod ui;
+pub mod aws;
+
+use aws::AwsRole;
 
 pub trait IdentiyProvider {
     fn get_saml_assertion(&self) -> anyhow::Result<SAMLAssertion>;
@@ -13,7 +16,7 @@ impl SAMLAssertion {
         base64::encode(&self.assertion)
     }
 
-    pub fn extract_roles(&self) -> anyhow::Result<Vec<String>> {
+    pub fn extract_roles(&self) -> anyhow::Result<Vec<AwsRole>> {
         let doc = roxmltree::Document::parse(&self.assertion)?;
 
         let element = doc
@@ -23,8 +26,13 @@ impl SAMLAssertion {
 
         let roles = element
             .children()
-            .flat_map(|e| e.text().map(|t| t.trim().to_string()))
-            .collect::<Vec<String>>();
+            .flat_map(|e| e.text().map(|t| {
+                let mut split = t.trim().split(',');
+                let role_arn = split.next().unwrap();
+                let principal_arn = split.next().unwrap();
+                AwsRole::new(principal_arn.to_string(), role_arn.to_string())
+            }))
+            .collect::<Vec<_>>();
 
         Ok(roles)
     }
