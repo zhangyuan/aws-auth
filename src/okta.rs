@@ -79,16 +79,20 @@ impl<'a> Okta<'a> {
 
             let mfa_factor = self.ui.get_mfa_factor(&mfa_factors);
 
-            return self.verify_mfa_code(state_token, mfa_factor)
+            return self.verify_mfa_code(state_token, mfa_factor);
         }
 
         Err(anyhow::anyhow!("Error occurs"))
     }
 
-    fn verify_mfa_code(&self, state_token: &String, mfa_factor: &MfaFactor) -> anyhow::Result<SAMLAssertion> {
+    fn verify_mfa_code(
+        &self,
+        state_token: &str,
+        mfa_factor: &MfaFactor,
+    ) -> anyhow::Result<SAMLAssertion> {
         loop {
             let code = self.ui.get_mfa_code(&format!(
-                "MFA Code({} - {})",
+                "MFA Code({} - {}): ",
                 mfa_factor.provider, mfa_factor.factor_type
             ));
 
@@ -107,8 +111,7 @@ impl<'a> Okta<'a> {
                 .json(&request_data)
                 .send()?;
             if response.status().is_success() {
-                let resp: VerifyResponse = response
-                    .json()?;
+                let resp: VerifyResponse = response.json()?;
 
                 log::debug!("verify response: {:?}", resp);
 
@@ -116,13 +119,15 @@ impl<'a> Okta<'a> {
                 let session_id = self.get_session_id(&session_token)?;
                 let assertion = self.get_saml(&session_id)?;
 
-                return Ok(assertion)
+                return Ok(assertion);
             }
 
-            self.ui.error(&format!("MFA code verification failed! (status_code: {})", response.status().as_u16()));
+            self.ui.error(&format!(
+                "MFA code verification failed! (status_code: {})",
+                response.status().as_u16()
+            ));
             self.ui.error(&format!("{}", response.text()?));
         }
-
     }
 
     fn authn(&self) -> anyhow::Result<AuthNResponse> {
@@ -133,21 +138,19 @@ impl<'a> Okta<'a> {
             request_data.insert("password", password);
 
             let uri = format!("{}/api/v1/authn", self.base_uri);
-            let response = self
-                .http_client
-                .post(uri)
-                .json(&request_data)
-                .send()?;
+            let response = self.http_client.post(uri).json(&request_data).send()?;
             if response.status().is_success() {
                 let resp = response.json()?;
                 log::debug!("authn response: {:?}", resp);
-                return Ok(resp)
+                return Ok(resp);
             }
 
-            self.ui.error(&format!("Authentication failed! (status_code: {})", response.status().as_u16()));
+            self.ui.error(&format!(
+                "Authentication failed! (status_code: {})",
+                response.status().as_u16()
+            ));
             self.ui.error(&response.text()?);
         }
-
     }
     fn get_session_id(&self, session_token: &str) -> anyhow::Result<String> {
         let mut request_data = HashMap::new();

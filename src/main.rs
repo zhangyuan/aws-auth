@@ -10,11 +10,11 @@ pub mod saml;
 pub mod ui;
 
 use aws::AwsClient;
+use aws::Credentials;
 use identity_provider::IdentityProvider;
 use okta::Okta;
 use saml::SAMLAssertion;
 use ui::{StdUI, UI};
-use aws::Credentials;
 
 fn main() -> anyhow::Result<()> {
     env_logger::init();
@@ -58,11 +58,14 @@ fn load_settings() -> HashMap<String, String> {
     settings
         .merge(config::File::with_name("aws-auth.toml"))
         .unwrap();
-    let settings = settings.try_into::<HashMap<String, String>>().unwrap();
-    settings
+    settings.try_into::<HashMap<String, String>>().unwrap()
 }
 
-fn get_sts_token(ui: &dyn UI, aws: &AwsClient, saml_assertion: &SAMLAssertion) -> anyhow::Result<Credentials> {
+fn get_sts_token(
+    ui: &dyn UI,
+    aws: &AwsClient,
+    saml_assertion: &SAMLAssertion,
+) -> anyhow::Result<Credentials> {
     let roles = saml_assertion.extract_roles()?;
 
     let selected_role = ui.get_aws_role(&roles);
@@ -102,5 +105,4 @@ aws_session_token = {}
     file.write_all(credentials_file_content.as_bytes())?;
 
     Ok(())
-
 }

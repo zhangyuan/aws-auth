@@ -1,5 +1,6 @@
 use crate::aws::AwsRole;
 use crate::identity_provider::MfaFactor;
+use colored::*;
 use std::io::{self, BufRead, Write};
 
 pub trait UI {
@@ -7,21 +8,21 @@ pub trait UI {
     fn get_mfa_code(&self, prompt: &str) -> String;
     fn get_mfa_factor<'a>(&self, factors: &'a [MfaFactor]) -> &'a MfaFactor;
     fn get_aws_role<'a>(&self, roles: &'a [crate::aws::AwsRole]) -> &'a AwsRole;
-    fn error(&self, message: &str) -> ();
+    fn error(&self, message: &str);
 }
 
 pub struct StdUI {}
 
 impl UI for StdUI {
     fn get_username_and_password(&self) -> (String, String) {
-        let username = self.get("Username");
-        let password = self.get_password("Password");
+        let username = self.get_user_input("Username: ");
+        let password = self.get_password("Password: ");
 
         (username, password)
     }
 
     fn get_mfa_code(&self, prompt: &str) -> String {
-        self.get(prompt)
+        self.get_user_input(prompt)
     }
 
     fn get_mfa_factor<'a>(&self, factors: &'a [MfaFactor]) -> &'a MfaFactor {
@@ -32,12 +33,17 @@ impl UI for StdUI {
             .iter()
             .filter(|f| f.factor_type == "token:software:totp")
             .collect::<Vec<_>>();
+
+        if totp_factors.len() == 1 {
+            return totp_factors[0];
+        }
+        println!("{}", "Available MFA method(s):".green());
         loop {
             for (idx, e) in totp_factors.iter().enumerate() {
                 println!("[{}] {} - {} ", idx, e.provider, e.factor_type);
             }
             text.clear();
-            print!("Select the mfa method: ");
+            print!("{}", "Select the MFA method: ".green());
             io::stdout().flush().unwrap();
 
             stdin
@@ -68,7 +74,7 @@ impl UI for StdUI {
                 println!("[{}] {}", idx, e.principal_arn);
             }
             text.clear();
-            print!("Select the role: ");
+            print!("{}", "Select the role: ".green());
             io::stdout().flush().unwrap();
             stdin
                 .lock()
@@ -84,17 +90,17 @@ impl UI for StdUI {
         }
     }
 
-    fn error(&self, message: &str) -> () {
+    fn error(&self, message: &str) {
         println!("{}", message);
     }
 }
 
 impl StdUI {
-    fn get(&self, prompt: &str) -> String {
+    fn get_user_input(&self, prompt: &str) -> String {
         let stdin = io::stdin();
         let mut text = String::new();
         while text.trim().is_empty() {
-            print!("{}: ", prompt);
+            print!("{}", prompt.green());
             io::stdout().flush().unwrap();
             text.clear();
             stdin
@@ -107,7 +113,7 @@ impl StdUI {
 
     fn get_password(&self, prompt: &str) -> String {
         loop {
-            print!("{}: ", prompt);
+            print!("{}", prompt.green());
             io::stdout().flush().unwrap();
             let password = rpassword::read_password().unwrap();
             if password.trim().is_empty() {
