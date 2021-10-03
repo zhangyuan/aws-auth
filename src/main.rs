@@ -17,7 +17,7 @@ use saml::SAMLAssertion;
 
 fn main() -> anyhow::Result<()> {
     let mut settings = config::Config::default();
-    settings.merge(config::File::with_name("aws-auth")).unwrap();
+    settings.merge(config::File::with_name("aws-auth.toml")).unwrap();
     let settings = settings.try_into::<HashMap<String, String>>().unwrap();
 
     let app_link = settings.get("app-link").unwrap();
