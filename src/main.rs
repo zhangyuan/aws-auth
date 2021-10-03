@@ -16,6 +16,8 @@ use saml::SAMLAssertion;
 use ui::{StdUI, UI};
 
 fn main() -> anyhow::Result<()> {
+    env_logger::init();
+
     let mut settings = config::Config::default();
     settings
         .merge(config::File::with_name("aws-auth.toml"))
@@ -23,12 +25,12 @@ fn main() -> anyhow::Result<()> {
     let settings = settings.try_into::<HashMap<String, String>>().unwrap();
 
     let app_link = settings.get("app-link").unwrap();
-    println!("app_link: {}", app_link);
+    log::debug!("app_link: {}", app_link);
 
     let parsed_url = Url::parse(app_link)?;
     let okta_uri = format!("{}://{}", parsed_url.scheme(), parsed_url.domain().unwrap());
 
-    println!("okta_uri: {}", okta_uri);
+    log::debug!("okta_uri: {}", okta_uri);
 
     let client = http_client::create_http_client_with_redirects()?;
 
@@ -56,7 +58,7 @@ fn main() -> anyhow::Result<()> {
         &saml_assertion.encoded_as_base64(),
     )?;
 
-    println!("{:?}", credentials);
+    log::debug!("credentials: {:?}", credentials);
 
     let credentials_file_content = format!(
         r#"

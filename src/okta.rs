@@ -66,17 +66,17 @@ impl<'a> Okta<'a> {
         request_data.insert("username", username);
         request_data.insert("password", password);
 
-        let uri = format!("{}/api/v1/authn", self.base_uri);
+        let uri = format!("authn: {}/api/v1/authn", self.base_uri);
         let resp: AuthNResponse = self
             .http_client
             .post(uri)
             .json(&request_data)
             .send()?
             .json()?;
-        println!("{:?}", resp);
+        log::debug!("authn response: {:?}", resp);
 
         if resp.status == "MFA_REQUIRED" {
-            println!("MFA_REQUIRED");
+            log::debug!("MFA_REQUIRED");
             let state_token = &resp.state_token;
 
             let mfa_factors = resp
@@ -95,18 +95,6 @@ impl<'a> Okta<'a> {
                 "MFA Code({} - {})",
                 mfa_factor.provider, mfa_factor.factor_type
             ));
-            //
-            // let factor = resp
-            //     .embedded
-            //     .factors
-            //     .into_iter()
-            //     .find(|x| x.factor_type == "token:software:totp")
-            //     .unwrap();
-
-            // println!("token:software:totp");
-
-            // let mfa_prompt = format!("{}: ", factor.provider);
-            // let mfa_code = self.ui.get_mfa_code(&mfa_prompt);
 
             let mut request_data = HashMap::new();
             request_data.insert("stateToken", state_token);
@@ -114,8 +102,8 @@ impl<'a> Okta<'a> {
 
             let verify_url = &mfa_factor.link;
 
-            println!("{}", verify_url);
-            println!("{:?}", request_data);
+            log::debug!("verify url: {}", verify_url);
+            log::debug!("verify request data: {:?}", request_data);
 
             let resp: VerifyResponse = self
                 .http_client
@@ -124,7 +112,7 @@ impl<'a> Okta<'a> {
                 .send()?
                 .json()?;
 
-            println!("{:?}", resp);
+            log::debug!("verify response: {:?}", resp);
 
             let session_token = resp.session_token;
 
