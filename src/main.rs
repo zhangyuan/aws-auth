@@ -19,19 +19,15 @@ use aws::Credentials;
 fn main() -> anyhow::Result<()> {
     env_logger::init();
 
-    let mut settings = config::Config::default();
-    settings
-        .merge(config::File::with_name("aws-auth.toml"))
-        .unwrap();
-    let settings = settings.try_into::<HashMap<String, String>>().unwrap();
+    let settings = load_settings();
 
     let app_link = settings.get("app-link").unwrap();
     log::debug!("app_link: {}", app_link);
 
     let parsed_url = Url::parse(app_link)?;
-    let okta_uri = format!("{}://{}", parsed_url.scheme(), parsed_url.domain().unwrap());
+    let identify_base_uri = format!("{}://{}", parsed_url.scheme(), parsed_url.domain().unwrap());
 
-    log::debug!("okta_uri: {}", okta_uri);
+    log::debug!("okta_uri: {}", identify_base_uri);
 
     let client = http_client::create_http_client_with_redirects()?;
 
@@ -40,7 +36,7 @@ fn main() -> anyhow::Result<()> {
     let okta = Okta {
         ui: &stdui,
         http_client: &client,
-        base_uri: &okta_uri,
+        base_uri: &identify_base_uri,
         app_link,
     };
 
@@ -55,6 +51,15 @@ fn main() -> anyhow::Result<()> {
     write_credentials(&credentials)?;
 
     Ok(())
+}
+
+fn load_settings() -> HashMap<String, String> {
+    let mut settings = config::Config::default();
+    settings
+        .merge(config::File::with_name("aws-auth.toml"))
+        .unwrap();
+    let settings = settings.try_into::<HashMap<String, String>>().unwrap();
+    settings
 }
 
 fn get_sts_token(ui: &dyn UI, aws: &AwsClient, saml_assertion: &SAMLAssertion) -> anyhow::Result<Credentials> {

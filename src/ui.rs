@@ -58,6 +58,10 @@ impl UI for StdUI {
         let stdin = io::stdin();
         let mut text = String::new();
 
+        if roles.len() == 1 {
+            return &roles[0];
+        }
+
         loop {
             println!("Available role(s):");
             for (idx, e) in roles.iter().enumerate() {
