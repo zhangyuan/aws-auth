@@ -3,8 +3,8 @@ use scraper::Selector;
 use serde::Deserialize;
 use std::collections::HashMap;
 
+use crate::identity_provider::{IdentityProvider, MfaFactor};
 use crate::saml::SAMLAssertion;
-use crate::identity_provider::IdentityProvider;
 
 use crate::ui::UI;
 
@@ -19,11 +19,11 @@ struct AuthNResponse {
 
 #[derive(Deserialize, Debug)]
 struct AuthNResponseEmbedded {
-    factors: Vec<MfaFactor>,
+    factors: Vec<OktaMfaFactor>,
 }
 
 #[derive(Deserialize, Debug)]
-struct MfaFactor {
+pub struct OktaMfaFactor {
     provider: String,
     #[serde(rename = "factorType")]
     factor_type: String,
@@ -79,24 +79,40 @@ impl<'a> Okta<'a> {
             println!("MFA_REQUIRED");
             let state_token = &resp.state_token;
 
-            let factor = resp
+            let mfa_factors = resp
                 .embedded
                 .factors
                 .into_iter()
-                .find(|x| x.factor_type == "token:software:totp")
-                .unwrap();
+                .map(|factor| {
+                    let link = factor.links.get("verify").unwrap();
+                    MfaFactor::new(&factor.provider, &factor.factor_type, &link.href)
+                })
+                .collect::<Vec<_>>();
 
-            println!("token:software:totp");
+            let mfa_factor = self.ui.get_mfa_factor(&mfa_factors);
 
-            let mfa_prompt = format!("{}: ", factor.provider);
-            let mfa_code = self.ui.get_mfa_code(&mfa_prompt);
+            let code = self.ui.get_mfa_code(&format!(
+                "MFA Code({} - {})",
+                mfa_factor.provider, mfa_factor.factor_type
+            ));
+            //
+            // let factor = resp
+            //     .embedded
+            //     .factors
+            //     .into_iter()
+            //     .find(|x| x.factor_type == "token:software:totp")
+            //     .unwrap();
+
+            // println!("token:software:totp");
+
+            // let mfa_prompt = format!("{}: ", factor.provider);
+            // let mfa_code = self.ui.get_mfa_code(&mfa_prompt);
 
             let mut request_data = HashMap::new();
             request_data.insert("stateToken", state_token);
-            request_data.insert("answer", &mfa_code);
+            request_data.insert("answer", &code);
 
-            let verify_link = factor.links.get("verify").unwrap();
-            let verify_url = &verify_link.href;
+            let verify_url = &mfa_factor.link;
 
             println!("{}", verify_url);
             println!("{:?}", request_data);

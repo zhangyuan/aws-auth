@@ -1,9 +1,11 @@
-use std::io::{self, BufRead, Write};
 use crate::aws::AwsRole;
+use crate::identity_provider::MfaFactor;
+use std::io::{self, BufRead, Write};
 
 pub trait UI {
     fn get_username_and_password(&self) -> (String, String);
     fn get_mfa_code(&self, prompt: &str) -> String;
+    fn get_mfa_factor<'a>(&self, factors: &'a [MfaFactor]) -> &'a MfaFactor;
     fn get_aws_role<'a>(&self, roles: &'a [crate::aws::AwsRole]) -> &'a AwsRole;
 }
 
@@ -19,6 +21,36 @@ impl UI for StdUI {
 
     fn get_mfa_code(&self, prompt: &str) -> String {
         self.get(prompt)
+    }
+
+    fn get_mfa_factor<'a>(&self, factors: &'a [MfaFactor]) -> &'a MfaFactor {
+        let stdin = io::stdin();
+        let mut text = String::new();
+
+        let totp_factors = factors
+            .iter()
+            .filter(|f| f.factor_type == "token:software:totp")
+            .collect::<Vec<_>>();
+        loop {
+            for (idx, e) in totp_factors.iter().enumerate() {
+                println!("[{}] {} - {} ", idx, e.provider, e.factor_type);
+            }
+            text.clear();
+            print!("Select the mfa method: ");
+            io::stdout().flush().unwrap();
+
+            stdin
+                .lock()
+                .read_line(&mut text)
+                .unwrap_or_else(|_| panic!("Could not read MFA"));
+            let result = text.trim().parse::<usize>();
+
+            if let Ok(selected) = result {
+                if selected < totp_factors.len() {
+                    return totp_factors.get(selected).unwrap();
+                }
+            }
+        }
     }
 
     fn get_aws_role<'a>(&self, roles: &'a [crate::aws::AwsRole]) -> &'a AwsRole {

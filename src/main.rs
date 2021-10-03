@@ -3,21 +3,23 @@ use std::io::Write;
 use url::Url;
 
 pub mod aws;
-pub mod saml;
-pub mod identity_provider;
-pub mod ui;
 pub mod http_client;
+pub mod identity_provider;
 pub mod okta;
+pub mod saml;
+pub mod ui;
 
-use identity_provider::IdentityProvider;
-use ui::{StdUI, UI};
-use okta::Okta;
 use aws::AwsClient;
+use identity_provider::IdentityProvider;
+use okta::Okta;
 use saml::SAMLAssertion;
+use ui::{StdUI, UI};
 
 fn main() -> anyhow::Result<()> {
     let mut settings = config::Config::default();
-    settings.merge(config::File::with_name("aws-auth.toml")).unwrap();
+    settings
+        .merge(config::File::with_name("aws-auth.toml"))
+        .unwrap();
     let settings = settings.try_into::<HashMap<String, String>>().unwrap();
 
     let app_link = settings.get("app-link").unwrap();
@@ -44,7 +46,7 @@ fn main() -> anyhow::Result<()> {
 
     let saml_assertion = get_saml_assertion(&okta)?;
 
-    let roles= saml_assertion.extract_roles()?;
+    let roles = saml_assertion.extract_roles()?;
 
     let selected_role = stdui.get_aws_role(&roles);
 
