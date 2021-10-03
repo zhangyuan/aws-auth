@@ -61,19 +61,7 @@ pub struct Okta<'a> {
 
 impl<'a> Okta<'a> {
     pub fn primary_auth(&self) -> anyhow::Result<SAMLAssertion> {
-        let (username, password) = self.ui.get_username_and_password();
-        let mut request_data = HashMap::new();
-        request_data.insert("username", username);
-        request_data.insert("password", password);
-
-        let uri = format!("{}/api/v1/authn", self.base_uri);
-        let resp: AuthNResponse = self
-            .http_client
-            .post(uri)
-            .json(&request_data)
-            .send()?
-            .json()?;
-        log::debug!("authn response: {:?}", resp);
+        let resp = self.authn()?;
 
         if resp.status == "MFA_REQUIRED" {
             log::debug!("MFA_REQUIRED");
@@ -91,6 +79,14 @@ impl<'a> Okta<'a> {
 
             let mfa_factor = self.ui.get_mfa_factor(&mfa_factors);
 
+            return self.verify_mfa_code(state_token, mfa_factor)
+        }
+
+        Err(anyhow::anyhow!("Error occurs"))
+    }
+
+    fn verify_mfa_code(&self, state_token: &String, mfa_factor: &MfaFactor) -> anyhow::Result<SAMLAssertion> {
+        loop {
             let code = self.ui.get_mfa_code(&format!(
                 "MFA Code({} - {})",
                 mfa_factor.provider, mfa_factor.factor_type
@@ -105,25 +101,53 @@ impl<'a> Okta<'a> {
             log::debug!("verify url: {}", verify_url);
             log::debug!("verify request data: {:?}", request_data);
 
-            let resp: VerifyResponse = self
+            let response = self
                 .http_client
                 .post(verify_url)
                 .json(&request_data)
-                .send()?
-                .json()?;
+                .send()?;
+            if response.status().is_success() {
+                let resp: VerifyResponse = response
+                    .json()?;
 
-            log::debug!("verify response: {:?}", resp);
+                log::debug!("verify response: {:?}", resp);
 
-            let session_token = resp.session_token;
+                let session_token = resp.session_token;
+                let session_id = self.get_session_id(&session_token)?;
+                let assertion = self.get_saml(&session_id)?;
 
-            let session_id = self.get_session_id(&session_token)?;
+                return Ok(assertion)
+            }
 
-            let assertion = self.get_saml(&session_id)?;
-
-            return Ok(assertion);
+            self.ui.error(&format!("MFA code verification failed! (status_code: {})", response.status().as_u16()));
+            self.ui.error(&format!("{}", response.text()?));
         }
 
-        Err(anyhow::anyhow!("Error occurs"))
+    }
+
+    fn authn(&self) -> anyhow::Result<AuthNResponse> {
+        loop {
+            let (username, password) = self.ui.get_username_and_password();
+            let mut request_data = HashMap::new();
+            request_data.insert("username", username);
+            request_data.insert("password", password);
+
+            let uri = format!("{}/api/v1/authn", self.base_uri);
+            let response = self
+                .http_client
+                .post(uri)
+                .json(&request_data)
+                .send()?;
+            if response.status().is_success() {
+                let resp = response.json()?;
+                log::debug!("authn response: {:?}", resp);
+                return Ok(resp)
+            }
+
+            self.ui.error(&format!("Authentication failed! (status_code: {})", response.status().as_u16()));
+            self.ui.error(&response.text()?);
+        }
+
     }
     fn get_session_id(&self, session_token: &str) -> anyhow::Result<String> {
         let mut request_data = HashMap::new();

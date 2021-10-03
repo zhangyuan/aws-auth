@@ -7,6 +7,7 @@ pub trait UI {
     fn get_mfa_code(&self, prompt: &str) -> String;
     fn get_mfa_factor<'a>(&self, factors: &'a [MfaFactor]) -> &'a MfaFactor;
     fn get_aws_role<'a>(&self, roles: &'a [crate::aws::AwsRole]) -> &'a AwsRole;
+    fn error(&self, message: &str) -> ();
 }
 
 pub struct StdUI {}
@@ -77,6 +78,10 @@ impl UI for StdUI {
                 }
             }
         }
+    }
+
+    fn error(&self, message: &str) -> () {
+        println!("{}", message);
     }
 }
 
