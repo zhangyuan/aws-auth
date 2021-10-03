@@ -14,6 +14,7 @@ use identity_provider::IdentityProvider;
 use okta::Okta;
 use saml::SAMLAssertion;
 use ui::{StdUI, UI};
+use aws::Credentials;
 
 fn main() -> anyhow::Result<()> {
     env_logger::init();
@@ -35,6 +36,7 @@ fn main() -> anyhow::Result<()> {
     let client = http_client::create_http_client_with_redirects()?;
 
     let stdui = StdUI {};
+
     let okta = Okta {
         ui: &stdui,
         http_client: &client,
@@ -48,9 +50,17 @@ fn main() -> anyhow::Result<()> {
 
     let saml_assertion = get_saml_assertion(&okta)?;
 
+    let credentials = get_sts_token(&stdui, &aws, &saml_assertion)?;
+
+    write_credentials(&credentials)?;
+
+    Ok(())
+}
+
+fn get_sts_token(ui: &dyn UI, aws: &AwsClient, saml_assertion: &SAMLAssertion) -> anyhow::Result<Credentials> {
     let roles = saml_assertion.extract_roles()?;
 
-    let selected_role = stdui.get_aws_role(&roles);
+    let selected_role = ui.get_aws_role(&roles);
 
     let credentials = aws.get_sts_token(
         &selected_role.role_arn,
@@ -60,6 +70,14 @@ fn main() -> anyhow::Result<()> {
 
     log::debug!("credentials: {:?}", credentials);
 
+    Ok(credentials)
+}
+
+fn get_saml_assertion(provider: &dyn IdentityProvider) -> anyhow::Result<SAMLAssertion> {
+    provider.get_saml_assertion()
+}
+
+fn write_credentials(credentials: &Credentials) -> anyhow::Result<()> {
     let credentials_file_content = format!(
         r#"
 [default]
@@ -79,8 +97,5 @@ aws_session_token = {}
     file.write_all(credentials_file_content.as_bytes())?;
 
     Ok(())
-}
 
-fn get_saml_assertion(provider: &dyn IdentityProvider) -> anyhow::Result<SAMLAssertion> {
-    provider.get_saml_assertion()
 }

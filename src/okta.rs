@@ -66,7 +66,7 @@ impl<'a> Okta<'a> {
         request_data.insert("username", username);
         request_data.insert("password", password);
 
-        let uri = format!("authn: {}/api/v1/authn", self.base_uri);
+        let uri = format!("{}/api/v1/authn", self.base_uri);
         let resp: AuthNResponse = self
             .http_client
             .post(uri)
