@@ -1,3 +1,4 @@
 /target
 .idea
-aws-auth.toml
+.aws-auth.toml
+.DS_Store
