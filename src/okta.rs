@@ -126,7 +126,7 @@ impl<'a> Okta<'a> {
                 "MFA code verification failed! (status_code: {})",
                 response.status().as_u16()
             ));
-            self.ui.error(&format!("{}", response.text()?));
+            self.ui.error(response.text()?.as_str());
         }
     }
 

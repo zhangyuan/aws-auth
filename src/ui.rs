@@ -91,7 +91,7 @@ impl UI for StdUI {
     }
 
     fn error(&self, message: &str) {
-        println!("{}", message);
+        println!("{}", message.red());
     }
 }
 

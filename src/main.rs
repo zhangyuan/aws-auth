@@ -1,5 +1,6 @@
 use std::collections::HashMap;
 use std::io::Write;
+use std::path::Path;
 use url::Url;
 
 pub mod aws;
@@ -55,9 +56,24 @@ fn main() -> anyhow::Result<()> {
 
 fn load_settings() -> HashMap<String, String> {
     let mut settings = config::Config::default();
+
+    let local_config_path = Path::new(".aws-auth.toml").to_path_buf();
+
+    let home = std::env::var("HOME").unwrap();
+    let global_config_path = Path::new(&home).join(".aws-auth.toml");
+
+    let config_path = if local_config_path.is_file() {
+        local_config_path
+    } else if global_config_path.is_file() {
+        global_config_path
+    } else {
+        panic!("Config file is not found.")
+    };
+
     settings
-        .merge(config::File::with_name("aws-auth.toml"))
+        .merge(config::File::with_name(config_path.to_str().unwrap()))
         .unwrap();
+
     settings.try_into::<HashMap<String, String>>().unwrap()
 }
 
