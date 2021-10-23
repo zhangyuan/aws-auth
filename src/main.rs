@@ -14,6 +14,8 @@ use aws_sdk_sts::{Region, Client, Credentials};
 use std::{env};
 use tokio::fs::OpenOptions;
 use tokio::io::AsyncWriteExt;
+use config::Config;
+use crate::saml::{AwsRole, SAMLAssertion};
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
@@ -30,37 +32,16 @@ async fn main() -> anyhow::Result<()> {
     let mut credentials_config = config::Config::default();
     credentials_config.merge(config::File::with_name(&credentials_path).format(config::FileFormat::Ini))?;
 
-    let credentials = if let Ok(default_credentials) = credentials_config.get_table("default") {
-        if default_credentials.contains_key("aws_access_key_id")
-            && default_credentials.contains_key("aws_secret_access_key")
-            && default_credentials.contains_key("aws_session_token")
-        {
-            let access_key_id = default_credentials.get("aws_access_key_id")
-                .unwrap()
-                .to_string();
-            let secret_access_key = default_credentials.get("aws_secret_access_key")
-                .unwrap()
-                .to_string();
-            let session_token = default_credentials.get("aws_session_token")
-                .unwrap()
-                .to_string();
-            Credentials::from_keys(access_key_id, secret_access_key, Some(session_token))
-        } else {
-            Credentials::from_keys("", "", None)
-        }
-    } else {
-        Credentials::from_keys("", "", None)
-    };
-
+    let maybe_credentials = find_credentials_or_get_stub(&mut credentials_config);
 
     let config = aws_config::ConfigLoader::default()
-        .credentials_provider(credentials.clone())
+        .credentials_provider(maybe_credentials.clone().unwrap_or(Credentials::from_keys("", "", None)))
         .region(Region::new("cn-northwest-1"))
         .load().await;
 
     let aws_client = aws_sdk_sts::Client::new(&config);
 
-    if ! &credentials.access_key_id().is_empty() && ! &credentials.secret_access_key().is_empty() {
+    if maybe_credentials.is_some() {
         let sts_result = aws_client.get_caller_identity().send().await;
 
         if sts_result.is_ok() {
@@ -97,14 +78,8 @@ async fn main() -> anyhow::Result<()> {
     let roles = saml_assertion.extract_roles()?;
     let selected_role = stdui.get_aws_role(&roles);
 
-    let result = aws_client
-        .assume_role_with_saml()
-        .role_arn(&selected_role.role_arn)
-        .principal_arn(&selected_role.principal_arn)
-        .saml_assertion(&saml_assertion.encoded_as_base64())
-        .send().await?;
+    let credentials = get_credentials_by_assume_role_with_saml(aws_client, &saml_assertion, &selected_role).await?;
 
-    let credentials = result.credentials.unwrap();
     write_credentials(&credentials).await?;
 
     if let Some(role_to_assume) = maybe_role_to_assume {
@@ -117,6 +92,43 @@ async fn main() -> anyhow::Result<()> {
     }
 
     Ok(())
+}
+
+async fn get_credentials_by_assume_role_with_saml(aws_client: Client, saml_assertion: &SAMLAssertion, selected_role: &AwsRole) -> anyhow::Result<aws_sdk_sts::model::Credentials> {
+    let result = aws_client
+        .assume_role_with_saml()
+        .role_arn(&selected_role.role_arn)
+        .principal_arn(&selected_role.principal_arn)
+        .saml_assertion(&saml_assertion.encoded_as_base64())
+        .send().await?;
+
+    let credentials = result.credentials.unwrap();
+    Ok(credentials)
+}
+
+fn find_credentials_or_get_stub(credentials_config: &mut Config) -> Option<Credentials> {
+    let maybe_credentials = if let Ok(default_credentials) = credentials_config.get_table("default") {
+        if default_credentials.contains_key("aws_access_key_id")
+            && default_credentials.contains_key("aws_secret_access_key")
+            && default_credentials.contains_key("aws_session_token")
+        {
+            let access_key_id = default_credentials.get("aws_access_key_id")
+                .unwrap()
+                .to_string();
+            let secret_access_key = default_credentials.get("aws_secret_access_key")
+                .unwrap()
+                .to_string();
+            let session_token = default_credentials.get("aws_session_token")
+                .unwrap()
+                .to_string();
+            Some(Credentials::from_keys(access_key_id, secret_access_key, Some(session_token)))
+        } else {
+            None
+        }
+    } else {
+        None
+    };
+    maybe_credentials
 }
 
 async fn assume_role(aws_client: &Client, role_to_assume: &String) -> anyhow::Result<()> {
