@@ -3,22 +3,28 @@ use std::io::Write;
 use std::path::Path;
 use url::Url;
 
-pub mod aws;
 pub mod http_client;
-pub mod identity_provider;
 pub mod okta;
 pub mod saml;
 pub mod ui;
 
-use aws::AwsClient;
-use aws::Credentials;
-use identity_provider::IdentityProvider;
 use okta::Okta;
-use saml::SAMLAssertion;
 use ui::{StdUI, UI};
+use aws_sdk_sts::{Region};
 
-fn main() -> anyhow::Result<()> {
+#[tokio::main]
+async fn main() -> anyhow::Result<()> {
     env_logger::init();
+
+    let config = aws_config::ConfigLoader::default()
+        .region(Region::new("cn-northwest-1"))
+        .load().await;
+
+    let aws_client = aws_sdk_sts::Client::new(&config);
+
+    let sts_result = aws_client.get_caller_identity().send().await;
+
+    log::debug!("get_caller_identity: {:?}", sts_result);
 
     let settings = load_settings();
 
@@ -30,7 +36,7 @@ fn main() -> anyhow::Result<()> {
 
     log::debug!("okta_uri: {}", identify_base_uri);
 
-    let client = http_client::create_http_client_with_redirects()?;
+    let client = http_client::create_http_client_with_redirects2()?;
 
     let stdui = StdUI {};
 
@@ -41,14 +47,24 @@ fn main() -> anyhow::Result<()> {
         app_link,
     };
 
-    let aws = AwsClient {
-        http_client: &http_client::create_http_client(),
-    };
+    let saml_assertion = okta.get_saml_assertion().await?;
 
-    let saml_assertion = get_saml_assertion(&okta)?;
+    let roles = saml_assertion.extract_roles()?;
+    let selected_role = stdui.get_aws_role(&roles);
 
-    let credentials = get_sts_token(&stdui, &aws, &saml_assertion)?;
+    println!("saml_assertion: {}", saml_assertion.assertion);
 
+    let result = aws_client
+        .assume_role_with_saml()
+        .role_arn(&selected_role.role_arn)
+        .principal_arn(&selected_role.principal_arn)
+        .saml_assertion(&saml_assertion.encoded_as_base64())
+        .send().await?;
+
+    println!("saml_assertion: {:?}", result);
+
+
+    let credentials: aws_sdk_sts::model::Credentials = result.credentials.unwrap();
     write_credentials(&credentials)?;
 
     Ok(())
@@ -77,39 +93,25 @@ fn load_settings() -> HashMap<String, String> {
     settings.try_into::<HashMap<String, String>>().unwrap()
 }
 
-fn get_sts_token(
-    ui: &dyn UI,
-    aws: &AwsClient,
-    saml_assertion: &SAMLAssertion,
-) -> anyhow::Result<Credentials> {
-    let roles = saml_assertion.extract_roles()?;
+fn write_credentials(credentials: &aws_sdk_sts::model::Credentials) -> anyhow::Result<()> {
+    let access_key_id = credentials.access_key_id.as_ref().unwrap();
+    let secret_access_key = credentials.secret_access_key.as_ref().unwrap();
+    let session_token = credentials.session_token.as_ref().unwrap();
+    let expiration = credentials.expiration.as_ref().unwrap();
 
-    let selected_role = ui.get_aws_role(&roles);
-
-    let credentials = aws.get_sts_token(
-        &selected_role.role_arn,
-        &selected_role.principal_arn,
-        &saml_assertion.encoded_as_base64(),
-    )?;
-
-    log::debug!("credentials: {:?}", credentials);
-
-    Ok(credentials)
-}
-
-fn get_saml_assertion(provider: &dyn IdentityProvider) -> anyhow::Result<SAMLAssertion> {
-    provider.get_saml_assertion()
-}
-
-fn write_credentials(credentials: &Credentials) -> anyhow::Result<()> {
     let credentials_file_content = format!(
         r#"
 [default]
 aws_access_key_id = {}
 aws_secret_access_key = {}
 aws_session_token = {}
+expiration = {}
         "#,
-        credentials.access_key_id, credentials.secret_access_key, credentials.session_token
+        access_key_id,
+        secret_access_key,
+        session_token,
+        expiration.epoch_seconds()
+
     );
 
     println!("{}", credentials_file_content);
