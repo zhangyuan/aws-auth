@@ -81,7 +81,7 @@ async fn main() -> anyhow::Result<()> {
 
     log::debug!("okta_uri: {}", identify_base_uri);
 
-    let client = http_client::create_http_client_with_redirects2()?;
+    let client = http_client::create_http_client_with_redirects()?;
 
     let stdui = StdUI {};
 
