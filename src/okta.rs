@@ -154,7 +154,12 @@ impl<'a> Okta<'a> {
             request_data.insert("password", password);
 
             let uri = format!("{}/api/v1/authn", self.base_uri);
-            let response = self.http_client.post(uri).json(&request_data).send().await?;
+            let response = self
+                .http_client
+                .post(uri)
+                .json(&request_data)
+                .send()
+                .await?;
             if response.status().is_success() {
                 let resp = response.json().await?;
                 log::debug!("authn response: {:?}", resp);

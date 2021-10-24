@@ -12,7 +12,6 @@ impl AwsRole {
     }
 }
 
-
 pub struct SAMLAssertion {
     pub assertion: String,
 }

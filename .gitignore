@@ -2,3 +2,4 @@
 .idea
 .aws-auth.toml
 .DS_Store
+.vscode/

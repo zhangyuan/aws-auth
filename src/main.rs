@@ -2,17 +2,17 @@ use std::collections::HashMap;
 use std::path::Path;
 
 use url::Url;
+pub mod aws;
 pub mod http_client;
 pub mod okta;
 pub mod saml;
-pub mod aws;
 
 pub mod ui;
+use aws_sdk_sts::{Credentials, Region};
 use okta::Okta;
 use ui::{StdUI, UI};
-use aws_sdk_sts::{Region, Credentials};
 
-use std::{env};
+use std::env;
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
@@ -24,14 +24,20 @@ async fn main() -> anyhow::Result<()> {
     let credentials_path = aws::touch_credential_file().await?;
 
     let mut credentials_config = config::Config::default();
-    credentials_config.merge(config::File::with_name(&credentials_path).format(config::FileFormat::Ini))?;
+    credentials_config
+        .merge(config::File::with_name(&credentials_path).format(config::FileFormat::Ini))?;
 
     let maybe_credentials = aws::lookup_credentials(&mut credentials_config);
 
     let config = aws_config::ConfigLoader::default()
-        .credentials_provider(maybe_credentials.clone().unwrap_or_else(|| Credentials::from_keys("", "", None)))
+        .credentials_provider(
+            maybe_credentials
+                .clone()
+                .unwrap_or_else(|| Credentials::from_keys("", "", None)),
+        )
         .region(Region::new("cn-northwest-1"))
-        .load().await;
+        .load()
+        .await;
 
     let aws_client = aws_sdk_sts::Client::new(&config);
 
@@ -70,14 +76,17 @@ async fn main() -> anyhow::Result<()> {
     let roles = saml_assertion.extract_roles()?;
     let selected_role = stdui.get_aws_role(&roles);
 
-    let credentials = aws::get_credentials_by_assume_role_with_saml(aws_client, &saml_assertion, selected_role).await?;
+    let credentials =
+        aws::get_credentials_by_assume_role_with_saml(aws_client, &saml_assertion, selected_role)
+            .await?;
 
     aws::write_credentials(&credentials_path, &credentials).await?;
 
     if let Some(role_to_assume) = maybe_role_to_assume {
         let config = aws_config::ConfigLoader::default()
             .region(Region::new("cn-northwest-1"))
-            .load().await;
+            .load()
+            .await;
 
         let aws_client = aws_sdk_sts::Client::new(&config);
         let credentials = aws::assume_role(&aws_client, role_to_assume).await?;

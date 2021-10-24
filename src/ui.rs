@@ -1,7 +1,7 @@
-use colored::*;
-use std::io::{self, BufRead, Write};
 use crate::okta::MfaFactor;
 use crate::saml::AwsRole;
+use colored::*;
+use std::io::{self, BufRead, Write};
 
 pub trait UI {
     fn get_username_and_password(&self) -> (String, String);
