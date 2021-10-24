@@ -1,13 +1,13 @@
-use crate::aws::AwsRole;
-use crate::identity_provider::MfaFactor;
 use colored::*;
 use std::io::{self, BufRead, Write};
+use crate::okta::MfaFactor;
+use crate::saml::AwsRole;
 
 pub trait UI {
     fn get_username_and_password(&self) -> (String, String);
     fn get_mfa_code(&self, prompt: &str) -> String;
     fn get_mfa_factor<'a>(&self, factors: &'a [MfaFactor]) -> &'a MfaFactor;
-    fn get_aws_role<'a>(&self, roles: &'a [crate::aws::AwsRole]) -> &'a AwsRole;
+    fn get_aws_role<'a>(&self, roles: &'a [AwsRole]) -> &'a AwsRole;
     fn error(&self, message: &str);
 }
 
@@ -60,7 +60,7 @@ impl UI for StdUI {
         }
     }
 
-    fn get_aws_role<'a>(&self, roles: &'a [crate::aws::AwsRole]) -> &'a AwsRole {
+    fn get_aws_role<'a>(&self, roles: &'a [AwsRole]) -> &'a AwsRole {
         let stdin = io::stdin();
         let mut text = String::new();
 

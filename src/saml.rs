@@ -1,4 +1,17 @@
-use crate::aws::AwsRole;
+pub struct AwsRole {
+    pub principal_arn: String,
+    pub role_arn: String,
+}
+
+impl AwsRole {
+    pub fn new(principal_arn: String, role_arn: String) -> Self {
+        Self {
+            principal_arn,
+            role_arn,
+        }
+    }
+}
+
 
 pub struct SAMLAssertion {
     pub assertion: String,
@@ -9,7 +22,7 @@ impl SAMLAssertion {
         base64::encode(&self.assertion)
     }
 
-    pub fn extract_roles(&self) -> anyhow::Result<Vec<crate::aws::AwsRole>> {
+    pub fn extract_roles(&self) -> anyhow::Result<Vec<AwsRole>> {
         let doc = roxmltree::Document::parse(&self.assertion)?;
 
         let element = doc
