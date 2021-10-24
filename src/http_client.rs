@@ -1,4 +1,4 @@
-pub fn create_http_client_with_redirects() -> Result<reqwest::Client, anyhow::Error> {
+pub fn create_http_client_with_redirects() -> anyhow::Result<reqwest::Client> {
     let client = reqwest::Client::builder()
         .redirect(reqwest::redirect::Policy::custom(|attempt| {
             if attempt.previous().len() > 5 {
