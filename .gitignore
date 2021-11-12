@@ -3,3 +3,4 @@
 .aws-auth.toml
 .DS_Store
 .vscode/
+.metals
