@@ -26,3 +26,9 @@ jobs:
       with:
         command: clippy
         args: -- -D warnings
+    - name: Build release binary
+      run: cargo build --release && du -sh target/release/aws-auth
+    - name: Strip release binary
+      run: strip target/release/aws-auth && du -sh target/release/aws-auth
+
+        
