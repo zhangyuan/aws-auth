@@ -26,16 +26,16 @@ jobs:
         command: clippy
         args: -- -D warnings
     - name: Build release binary
-      run: cargo build --release && du -sh target/release/aws_auth
+      run: cargo build --release && du -sh target/release/aws-auth
     - name: Strip release binary
-      run: strip target/release/aws_auth && du -sh target/release/aws_auth
+      run: strip target/release/aws-auth && du -sh target/release/aws-auth
     - name: Rename binary
-      run: mv target/release/aws_auth target/release/aws_auth-x86_64-apple-darwin
+      run: mv target/release/aws-auth target/release/aws-auth-x86_64-apple-darwin
     - name: Upload Binaries
       uses: svenstaro/upload-release-action@v2
       with:
         repo_token: ${{ secrets.GITHUB_TOKEN }}
-        file: 'target/release/aws_auth-x86_64-apple-darwin'
+        file: 'target/release/aws-auth-x86_64-apple-darwin'
         tag: ${{ github.ref }}
         overwrite: true
         file_glob: true
