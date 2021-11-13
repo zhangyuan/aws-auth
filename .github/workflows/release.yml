@@ -1,0 +1,41 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  release:
+    runs-on: macos-10.15
+    steps:
+    - uses: actions/checkout@v2
+    - name: Install stable toolchain
+      uses: actions-rs/toolchain@v1
+      with:
+        profile: minimal
+        toolchain: stable
+        override: true
+        components: clippy
+    - name: Run cargo clippy
+      uses: actions-rs/cargo@v1
+      with:
+        command: clippy
+        args: -- -D warnings
+    - name: Build release binary
+      run: cargo build --release && du -sh target/release/aws_auth
+    - name: Strip release binary
+      run: strip target/release/aws_auth && du -sh target/release/aws_auth
+    - name: Rename binary
+      run: mv target/release/aws_auth releases/aws_auth-x86_64-apple-darwin
+    - name: Upload Binaries
+      uses: svenstaro/upload-release-action@v2
+      with:
+        repo_token: ${{ secrets.GITHUB_TOKEN }}
+        file: 'releases/aws_auth*'
+        tag: ${{ github.ref }}
+        overwrite: true
+        file_glob: true
