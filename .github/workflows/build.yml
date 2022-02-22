@@ -31,5 +31,9 @@ jobs:
       run: cargo build --release && du -sh target/release/aws-auth
     - name: Strip release binary
       run: strip target/release/aws-auth && du -sh target/release/aws-auth
-
-        
+    - name: Compress binaries
+      uses: svenstaro/upx-action@v2
+      with:
+        file: target/release/aws-auth
+    - name: Check binary size
+      run: du -sh target/release/aws-auth

@@ -53,7 +53,6 @@ struct Link {
 
 #[derive(Deserialize, Debug)]
 struct VerifyResponse {
-    status: String,
     #[serde(rename = "sessionToken")]
     session_token: String,
 }
@@ -63,10 +62,6 @@ struct CreateSessionResponse {
     id: String,
 }
 
-#[derive(Deserialize, Debug)]
-struct Role {
-    name: String,
-}
 pub struct Okta<'a> {
     pub ui: &'a dyn UI,
     pub http_client: &'a reqwest::Client,
