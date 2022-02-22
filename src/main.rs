@@ -1,4 +1,3 @@
-use std::collections::HashMap;
 use std::path::Path;
 
 use url::Url;
@@ -23,10 +22,10 @@ async fn main() -> anyhow::Result<()> {
 
     let credentials_path = aws::touch_credential_file().await?;
 
-    let mut credentials_config = config::Config::default();
-    credentials_config
-        .merge(config::File::with_name(&credentials_path).format(config::FileFormat::Ini))?;
-
+    let mut credentials_config = config::Config::builder()
+        .add_source(config::File::with_name(&credentials_path).format(config::FileFormat::Ini))
+        .build()?;
+        
     let maybe_credentials = aws::lookup_credentials(&mut credentials_config);
 
     let config = aws_config::ConfigLoader::default()
@@ -53,11 +52,11 @@ async fn main() -> anyhow::Result<()> {
         }
     }
 
-    let settings = load_settings();
+    let settings = load_settings()?;
 
-    let app_link = settings.get("app-link").unwrap();
+    let app_link = settings.get_string("app-link")?;
 
-    let parsed_url = Url::parse(app_link)?;
+    let parsed_url = Url::parse(&app_link)?;
     let identify_base_uri = format!("{}://{}", parsed_url.scheme(), parsed_url.domain().unwrap());
 
     let client = http_client::create_http_client_with_redirects()?;
@@ -68,7 +67,7 @@ async fn main() -> anyhow::Result<()> {
         ui: &stdui,
         http_client: &client,
         base_uri: &identify_base_uri,
-        app_link,
+        app_link: &app_link,
     };
 
     let saml_assertion = okta.get_saml_assertion().await?;
@@ -96,9 +95,7 @@ async fn main() -> anyhow::Result<()> {
     Ok(())
 }
 
-fn load_settings() -> HashMap<String, String> {
-    let mut settings = config::Config::default();
-
+fn load_settings() -> anyhow::Result<config::Config> {
     let local_config_path = Path::new(".aws-auth.toml").to_path_buf();
 
     let home = std::env::var("HOME").unwrap();
@@ -112,9 +109,8 @@ fn load_settings() -> HashMap<String, String> {
         panic!("Config file is not found.")
     };
 
-    settings
-        .merge(config::File::with_name(config_path.to_str().unwrap()))
-        .unwrap();
-
-    settings.try_into::<HashMap<String, String>>().unwrap()
+    config::Config::builder()
+        .add_source(config::File::with_name(config_path.to_str().unwrap()))
+        .build()
+        .map_err(anyhow::Error::new)
 }
