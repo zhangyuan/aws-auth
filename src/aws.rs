@@ -96,7 +96,7 @@ expiration = {}
         access_key_id,
         secret_access_key,
         session_token,
-        expiration.epoch_seconds()
+        expiration.secs(),
     );
 
     let mut file = tokio::fs::File::create(path).await?;
