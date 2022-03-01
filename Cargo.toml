@@ -11,16 +11,16 @@ reqwest = { version = "0.11", features = ["json"] }
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 anyhow = "1.0"
-rpassword = "5.0.1"
-scraper = "0.12.0"
-base64 = "0.13.0"
-roxmltree = "0.14.1"
+rpassword = "5.0"
+scraper = "0.12"
+base64 = "0.13"
+roxmltree = "0.14"
 config = "0.12"
-url = "2.2.2"
+url = "2.2"
 log = "0.4.14"
-env_logger = "0.9.0"
+env_logger = "0.9"
 colored = "2"
 tokio = { version = "1", features = ["full"] }
-aws-config = {version = "0.7.0"}
-aws-types = {version = "0.7.0", features = ["hardcoded-credentials"]}
-aws-sdk-sts = "0.7.0"
+aws-config = {version = "0.8"}
+aws-types = {version = "0.8", features = ["hardcoded-credentials"]}
+aws-sdk-sts = "0.8"
