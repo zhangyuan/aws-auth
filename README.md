@@ -15,7 +15,7 @@ cargo build --release
 2. Create the configuration file `.aws-auth.toml`, either in the same directory as `aws-auth` or in HOME directory. Example:
 
 ```
-app-link = "https://yourcompanyname.okta.com/home/yourcompanyname_awschinamyapp_1/aaaaaaaaaaaaaa/bbbbbbbbbbbb"%
+app-link = "https://yourcompanyname.okta.com/home/yourcompanyname_awschinamyapp_1/aaaaaaaaaaaaaa/bbbbbbbbbbbb"
 ```
 
 3. Run the command `aws-auth`, you'll be asked for username, password, mfa code, etc.
