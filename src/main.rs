@@ -7,7 +7,9 @@ pub mod okta;
 pub mod saml;
 
 pub mod ui;
-use aws_sdk_sts::{Credentials, Region};
+use aws_sdk_sts::{Credentials};
+use aws_config::meta::region::RegionProviderChain;
+
 use okta::Okta;
 use ui::{StdUI, UI};
 
@@ -15,10 +17,20 @@ use std::env;
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
+    env_logger::init();
+
     let args: Vec<String> = env::args().collect();
     let maybe_role_to_assume = args.get(1);
 
-    env_logger::init();
+    let region_provider = RegionProviderChain::default_provider();
+
+    let region = region_provider.region().await;
+
+    if region.is_none() {
+        panic!("region is not set.")
+    } else {
+        log::debug!("use region {}", region.unwrap());
+    }
 
     let credentials_path = aws::touch_credential_file().await?;
 
@@ -34,7 +46,6 @@ async fn main() -> anyhow::Result<()> {
                 .clone()
                 .unwrap_or_else(|| Credentials::from_keys("", "", None)),
         )
-        .region(Region::new("cn-northwest-1"))
         .load()
         .await;
 
@@ -83,7 +94,6 @@ async fn main() -> anyhow::Result<()> {
 
     if let Some(role_to_assume) = maybe_role_to_assume {
         let config = aws_config::ConfigLoader::default()
-            .region(Region::new("cn-northwest-1"))
             .load()
             .await;
 
@@ -106,7 +116,7 @@ fn load_settings() -> anyhow::Result<config::Config> {
     } else if global_config_path.is_file() {
         global_config_path
     } else {
-        panic!("Config file is not found.")
+        return Err(anyhow::anyhow!("Config file is not found."))
     };
 
     config::Config::builder()
