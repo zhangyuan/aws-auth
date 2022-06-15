@@ -6,7 +6,7 @@
 
 ## How to use it
 
-1. Build the project and get the executable program `aws-auth`
+1. Download the binary from [releases](https://github.com/zhangyuan/aws-auth/releases) and make it executable with proper permission, or build the project and get the executable program `aws-auth`
 
 ```
 cargo build --release
