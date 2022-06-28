@@ -66,7 +66,7 @@ pub async fn get_credentials_by_assume_role_with_saml(
     let result = aws_client
         .assume_role_with_saml()
         .role_arn(&selected_role.role_arn)
-        .principal_arn(&selected_role.principal_arn)
+        .principal_arn(&selected_role.provider_arn)
         .saml_assertion(&saml_assertion.encoded_as_base64())
         .send()
         .await?;
