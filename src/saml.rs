@@ -1,12 +1,12 @@
 pub struct AwsRole {
-    pub principal_arn: String,
+    pub provider_arn: String,
     pub role_arn: String,
 }
 
 impl AwsRole {
-    pub fn new(principal_arn: String, role_arn: String) -> Self {
+    pub fn new(provider_arn: String, role_arn: String) -> Self {
         Self {
-            principal_arn,
+            provider_arn,
             role_arn,
         }
     }
@@ -33,10 +33,13 @@ impl SAMLAssertion {
             .children()
             .flat_map(|e| {
                 e.text().map(|t| {
-                    let mut split = t.trim().split(',');
-                    let role_arn = split.next().unwrap();
-                    let principal_arn = split.next().unwrap();
-                    AwsRole::new(principal_arn.to_string(), role_arn.to_string())
+                    let split: Vec<&str> = t.trim().split(',').collect();
+                    let split = &split;
+                    
+                    let role = split.iter().find(|x| x.contains(":role/")).unwrap();
+                    let provider = split.iter().find(|x| x.contains(":saml-provider/")).unwrap();
+
+                    AwsRole::new(provider.to_string(), role.to_string())
                 })
             })
             .collect::<Vec<_>>();

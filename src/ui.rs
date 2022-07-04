@@ -68,14 +68,14 @@ impl UI for StdUI {
             print!("{}", "Role: ".green());
             println!("{}", &roles[0].role_arn);
             print!("{}", "Principal: ".green());
-            println!("{}", &roles[0].principal_arn);
+            println!("{}", &roles[0].provider_arn);
             return &roles[0];
         }
 
         loop {
             println!("{}", "Available role(s):".green());
             for (idx, e) in roles.iter().enumerate() {
-                println!("[{}] {}", idx, e.principal_arn);
+                println!("[{}] {}", idx, e.provider_arn);
             }
             text.clear();
             print!("{}", "Select the role: ".green());
