@@ -100,7 +100,7 @@ expiration = {}
     );
 
     let mut file = tokio::fs::File::create(path).await?;
-    let _result = file.write_all(credentials_file_content.as_bytes()).await?;
+    file.write_all(credentials_file_content.as_bytes()).await?;
     Ok(())
 }
 
