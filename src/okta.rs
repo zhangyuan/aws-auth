@@ -190,7 +190,7 @@ impl<'a> Okta<'a> {
         let resp = self
             .http_client
             .get(self.app_link)
-            .header("Cookie", format!("sid={}", session_id))
+            .header("Cookie", format!("sid={session_id}"))
             .send()
             .await?
             .text()

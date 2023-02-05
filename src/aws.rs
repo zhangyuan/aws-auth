@@ -106,7 +106,7 @@ expiration = {}
 
 pub async fn touch_credential_file() -> anyhow::Result<String> {
     let home = std::env::var("HOME").unwrap();
-    let credentials_path = format!("{}/.aws/credentials", home);
+    let credentials_path = format!("{home}/.aws/credentials");
     OpenOptions::new()
         .create(true)
         .write(true)
