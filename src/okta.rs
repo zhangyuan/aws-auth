@@ -2,6 +2,7 @@ use scraper::Html;
 use scraper::Selector;
 use serde::Deserialize;
 use std::collections::HashMap;
+use base64::Engine;
 
 use crate::saml::SAMLAssertion;
 
@@ -198,7 +199,7 @@ impl<'a> Okta<'a> {
 
         let base64_saml_assertion = get_base64_saml_assertion(&resp);
 
-        let x = base64::decode(base64_saml_assertion)?;
+        let x = Engine::decode(base64_saml_assertion)?;
         let assertion = String::from_utf8(x)?;
         Ok(SAMLAssertion { assertion })
     }

@@ -1,3 +1,5 @@
+use base64::Engine;
+
 pub struct AwsRole {
     pub provider_arn: String,
     pub role_arn: String,
@@ -18,7 +20,7 @@ pub struct SAMLAssertion {
 
 impl SAMLAssertion {
     pub fn encoded_as_base64(&self) -> String {
-        base64::encode(&self.assertion)
+        Engine::encode(&self.assertion)
     }
 
     pub fn extract_roles(&self) -> anyhow::Result<Vec<AwsRole>> {
@@ -35,7 +37,6 @@ impl SAMLAssertion {
                 e.text().map(|t| {
                     let split: Vec<&str> = t.trim().split(',').collect();
                     let split = &split;
-                    
                     let role = split.iter().find(|x| x.contains(":role/")).unwrap();
                     let provider = split.iter().find(|x| x.contains(":saml-provider/")).unwrap();
 
