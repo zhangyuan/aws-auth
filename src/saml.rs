@@ -1,3 +1,5 @@
+use base64::{Engine as _, engine::general_purpose};
+
 pub struct AwsRole {
     pub provider_arn: String,
     pub role_arn: String,
@@ -18,7 +20,7 @@ pub struct SAMLAssertion {
 
 impl SAMLAssertion {
     pub fn encoded_as_base64(&self) -> String {
-        base64::encode(&self.assertion)
+        general_purpose::STANDARD.encode(&self.assertion)
     }
 
     pub fn extract_roles(&self) -> anyhow::Result<Vec<AwsRole>> {
