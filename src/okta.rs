@@ -1,3 +1,4 @@
+use base64::{Engine as _, engine::general_purpose};
 use scraper::Html;
 use scraper::Selector;
 use serde::Deserialize;
@@ -198,7 +199,7 @@ impl<'a> Okta<'a> {
 
         let base64_saml_assertion = get_base64_saml_assertion(&resp);
 
-        let x = base64::decode(base64_saml_assertion)?;
+        let x = general_purpose::STANDARD.decode(base64_saml_assertion.as_str())?;
         let assertion = String::from_utf8(x)?;
         Ok(SAMLAssertion { assertion })
     }

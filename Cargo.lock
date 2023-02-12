@@ -64,7 +64,7 @@ dependencies = [
  "aws-config",
  "aws-sdk-sts",
  "aws-types",
- "base64 0.13.1",
+ "base64 0.21.0",
  "colored",
  "config",
  "env_logger",
