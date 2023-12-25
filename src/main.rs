@@ -7,8 +7,8 @@ pub mod okta;
 pub mod saml;
 
 pub mod ui;
-use aws_sdk_sts::{Credentials};
 use aws_config::meta::region::RegionProviderChain;
+use aws_sdk_sts::Credentials;
 
 use okta::Okta;
 use ui::{StdUI, UI};
@@ -24,20 +24,19 @@ async fn main() -> anyhow::Result<()> {
 
     let region_provider = RegionProviderChain::default_provider();
 
-    let region = region_provider.region().await;
-
-    if region.is_none() {
-        panic!("region is not set.")
-    } else {
-        log::debug!("use region {}", region.unwrap());
-    }
+    match region_provider.region().await {
+        Some(region) => {
+            log::debug!("Using region {}", region);
+        }
+        None => panic!("Region is not set."),
+    };
 
     let credentials_path = aws::touch_credential_file().await?;
 
     let mut credentials_config = config::Config::builder()
         .add_source(config::File::with_name(&credentials_path).format(config::FileFormat::Ini))
         .build()?;
-        
+
     let maybe_credentials = aws::lookup_credentials(&mut credentials_config);
 
     let config = aws_config::ConfigLoader::default()
@@ -93,9 +92,7 @@ async fn main() -> anyhow::Result<()> {
     aws::write_credentials(&credentials_path, &credentials).await?;
 
     if let Some(role_to_assume) = maybe_role_to_assume {
-        let config = aws_config::ConfigLoader::default()
-            .load()
-            .await;
+        let config = aws_config::ConfigLoader::default().load().await;
 
         let aws_client = aws_sdk_sts::Client::new(&config);
         let credentials = aws::assume_role(&aws_client, role_to_assume).await?;
@@ -116,7 +113,7 @@ fn load_settings() -> anyhow::Result<config::Config> {
     } else if global_config_path.is_file() {
         global_config_path
     } else {
-        return Err(anyhow::anyhow!("Config file is not found."))
+        return Err(anyhow::anyhow!("Config file is not found."));
     };
 
     config::Config::builder()

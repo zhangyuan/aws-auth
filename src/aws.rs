@@ -1,4 +1,5 @@
 use crate::saml::{AwsRole, SAMLAssertion};
+use dirs::home_dir;
 use std::path::Path;
 use tokio::fs::OpenOptions;
 use tokio::io::AsyncWriteExt;
@@ -71,7 +72,9 @@ pub async fn get_credentials_by_assume_role_with_saml(
         .send()
         .await?;
 
-    let credentials = result.credentials.unwrap();
+    let credentials = result
+        .credentials
+        .ok_or(anyhow::anyhow!("No credentials in response"))?;
 
     Ok(credentials)
 }
@@ -80,10 +83,22 @@ pub async fn write_credentials(
     path: &str,
     credentials: &aws_sdk_sts::model::Credentials,
 ) -> anyhow::Result<()> {
-    let access_key_id = credentials.access_key_id.as_ref().unwrap();
-    let secret_access_key = credentials.secret_access_key.as_ref().unwrap();
-    let session_token = credentials.session_token.as_ref().unwrap();
-    let expiration = credentials.expiration.as_ref().unwrap();
+    let access_key_id = credentials
+        .access_key_id
+        .as_ref()
+        .ok_or(anyhow::anyhow!("No access key id"))?;
+    let secret_access_key = credentials
+        .secret_access_key
+        .as_ref()
+        .ok_or(anyhow::anyhow!("No secret access key"))?;
+    let session_token = credentials
+        .session_token
+        .as_ref()
+        .ok_or(anyhow::anyhow!("No session token"))?;
+    let expiration = credentials
+        .expiration
+        .as_ref()
+        .ok_or(anyhow::anyhow!("No expiration date"))?;
 
     let credentials_file_content = format!(
         r#"
@@ -105,8 +120,8 @@ expiration = {}
 }
 
 pub async fn touch_credential_file() -> anyhow::Result<String> {
-    let home = std::env::var("HOME").unwrap();
-    let credentials_path = format!("{home}/.aws/credentials");
+    let home = home_dir().ok_or(anyhow::anyhow!("Unable to get home directory"))?;
+    let credentials_path = format!("{}/.aws/credentials", home.display());
     OpenOptions::new()
         .create(true)
         .write(true)

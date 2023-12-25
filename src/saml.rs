@@ -1,4 +1,4 @@
-use base64::{Engine as _, engine::general_purpose};
+use base64::{engine::general_purpose, Engine as _};
 
 pub struct AwsRole {
     pub provider_arn: String,
@@ -29,17 +29,19 @@ impl SAMLAssertion {
         let element = doc
             .descendants()
             .find(|n| n.attribute("Name") == Some("https://aws.amazon.com/SAML/Attributes/Role"))
-            .unwrap();
+            .ok_or(anyhow::anyhow!("Could not find the attribute"))?;
 
         let roles = element
             .children()
             .flat_map(|e| {
                 e.text().map(|t| {
                     let split: Vec<&str> = t.trim().split(',').collect();
-                    let split = &split;
-                    
+
                     let role = split.iter().find(|x| x.contains(":role/")).unwrap();
-                    let provider = split.iter().find(|x| x.contains(":saml-provider/")).unwrap();
+                    let provider = split
+                        .iter()
+                        .find(|x| x.contains(":saml-provider/"))
+                        .unwrap();
 
                     AwsRole::new(provider.to_string(), role.to_string())
                 })
