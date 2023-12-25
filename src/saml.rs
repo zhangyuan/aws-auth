@@ -29,14 +29,13 @@ impl SAMLAssertion {
         let element = doc
             .descendants()
             .find(|n| n.attribute("Name") == Some("https://aws.amazon.com/SAML/Attributes/Role"))
-            .unwrap();
+            .ok_or(anyhow::anyhow!("Could not find the attribute"))?;
 
         let roles = element
             .children()
             .flat_map(|e| {
                 e.text().map(|t| {
                     let split: Vec<&str> = t.trim().split(',').collect();
-                    let split = &split;
 
                     let role = split.iter().find(|x| x.contains(":role/")).unwrap();
                     let provider = split

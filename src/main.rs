@@ -24,13 +24,12 @@ async fn main() -> anyhow::Result<()> {
 
     let region_provider = RegionProviderChain::default_provider();
 
-    let region = region_provider.region().await;
-
-    if region.is_none() {
-        panic!("region is not set.")
-    } else {
-        log::debug!("use region {}", region.unwrap());
-    }
+    match region_provider.region().await {
+        Some(region) => {
+            log::debug!("Using region {}", region);
+        }
+        None => panic!("Region is not set."),
+    };
 
     let credentials_path = aws::touch_credential_file().await?;
 
